@@ -872,6 +872,12 @@ cEvent * cSearchExt::GetEventBySearchExt(const cSchedule *schedules, const cEven
       p1 = Events->First();
 
    time_t tNow=time(NULL);
+
+	 struct tm when;
+	 when = *localtime(&tNow);
+	 when.tm_mday += DAYS_SEARCH_MAX; 
+   time_t tScanEnd=mktime(&when);
+
    char* searchText = strdup(search);
 
    int searchStart = 0, searchStop = 0;
@@ -901,7 +907,10 @@ cEvent * cSearchExt::GetEventBySearchExt(const cSchedule *schedules, const cEven
       }
 
       if (skipRunningEvents && tNow > p->StartTime())
-	continue;
+				continue;
+
+      if (p->StartTime()>tScanEnd)
+				continue;
 
       // ignore events without title
       if (!p->Title() || !*p->Title())
@@ -1028,12 +1037,21 @@ cSearchResults* cSearchExt::Run(int PayTVMode, bool inspectTimerMargin, int eval
    time_t tNow=time(NULL);
    const cSchedule *Schedule = schedules->First();
    cSearchResults* pSearchResults = pPrevResults;
+#ifdef BL_NEU
+	 std::vector<cBlacklist*> bls;
+   GetBlackLists(bls);
+#else
    cSearchResults* pBlacklistResults = GetBlacklistEvents(inspectTimerMargin?MarginStop:0);
-
+#endif
    int counter = 0;
    while (Schedule) {
       cChannel* channel = Channels.GetByChannelID(Schedule->ChannelID(),true,true);
       if (!channel)
+      {
+         Schedule = (const cSchedule *)schedules->Next(Schedule);
+         continue;
+      }
+      if (channel->Number()>CHANNEL_SEARCH_MAX)
       {
          Schedule = (const cSchedule *)schedules->Next(Schedule);
          continue;
@@ -1086,7 +1104,11 @@ cSearchResults* cSearchExt::Run(int PayTVMode, bool inspectTimerMargin, int eval
          }
          if (event && Channels.GetByChannelID(event->ChannelID(),true,true))
          {
+#ifdef BL_NEU
+					  if(CheckBlacklists(bls, Schedule, event))
+#else
             if (pBlacklistResults && pBlacklistResults->Lookup(event))
+#endif
             {
                LogFile.Log(3,"skip '%s~%s' (%s - %s, channel %d): matches blacklist", event->Title()?event->Title():"no title", event->ShortText()?event->ShortText():"no subtitle", GETDATESTRING(event), GETTIMESTRING(event), ChannelNrFromEvent(event));
                continue;
@@ -1112,41 +1134,129 @@ cSearchResults* cSearchExt::Run(int PayTVMode, bool inspectTimerMargin, int eval
    return pSearchResults;
 }
 
+
+#ifdef BL_NEU
+void cSearchExts::GetBlackLists(std::vector<cBlacklist*> &bls)
+{
+	if (blacklistMode == blacklistsNone) return NULL;
+
+	cMutexLock BlacklistLock(&Blacklists);
+	if (blacklistMode == blacklistsOnlyGlobal)
+	{
+		cBlacklist* tmpblacklist = Blacklists.First();
+		while(tmpblacklist)
+		{
+			if (tmpblacklist->isGlobal) bls.push_back(tmpblacklist);
+			tmpblacklist = Blacklists.Next(tmpblacklist);
+		}
+	}
+	if (blacklistMode == blacklistsAll)
+	{
+		cBlacklist* tmpblacklist = Blacklists.First();
+		while(tmpblacklist)
+		{
+		  bls.push_back(tmpblacklist);
+			tmpblacklist = Blacklists.Next(tmpblacklist);
+		}
+	}
+	if (blacklistMode == blacklistsSelection)
+	{
+		cBlacklistObject* tmpblacklistObj = blacklists.First();
+		while(tmpblacklistObj)
+		{
+		  bls.push_back(tmpblacklistObj->blacklist);
+			tmpblacklistObj = blacklists.Next(tmpblacklistObj);
+		}
+	}
+}
+
+bool cSearchExt::CheckBlacklists(std::vector<cBlacklist*> &bls, Schedule, Event)
+{
+  for (std::vector<cBlacklist*>::iterator bl=bls.begin(); it!=bls.end(); ++it)
+  {
+		cChannel* channel = bl->Channels.GetByChannelID(Schedule->ChannelID(),true,true);
+		if (!channel)
+		{
+	    continue;
+		}
+
+		if (bl->useChannel == 1 && bl->channelMin && bl->channelMax)
+		{
+	    if (bl->channelMin->Number() > channel->Number() || bl->channelMax->Number() < channel->Number())
+	    {
+				continue;
+	    }
+		}
+		if (bl->useChannel == 2 && bl->channelGroup)
+		{
+	    cChannelGroup* group = ChannelGroups.GetGroupByName(bl->channelGroup);
+	    if (!group || !group->ChannelInGroup(channel))
+	    {
+				continue;
+	    }
+		}
+		if (bl->useChannel == 3)
+		{
+	    if (channel->Ca() >= CA_ENCRYPTED_MIN)
+	    {
+				continue;
+	    }
+		}
+		//const cEvent *pPrevEvent = NULL;
+		//do {
+	  //  const cEvent* event = GetEventByBlacklist(Schedule, pPrevEvent, MarginStop);
+	  pPrevEvent = event;
+	  if (event && Channels.GetByChannelID(event->ChannelID(),true,true))
+	  {
+			return true;
+			//	if (!pSearchResults) pSearchResults = new cSearchResults;
+			//	pSearchResults->Add(new cSearchResult(event, this));
+	  }
+		//} while(pPrevEvent);
+		//Schedule = (const cSchedule *)schedules->Next(Schedule);
+	}
+	//LogFile.Log(3,"found %d event(s) for blacklist '%s'", pSearchResults?pSearchResults->Count():0, search);
+  return false;
+}
+#endif
+
+
+	
 cSearchResults* cSearchExt::GetBlacklistEvents(int MarginStop)
 {
-   if (blacklistMode == blacklistsNone) return NULL;
+	if (blacklistMode == blacklistsNone) return NULL;
 
-   cMutexLock BlacklistLock(&Blacklists);
-   cSearchResults* blacklistEvents = NULL;
-   if (blacklistMode == blacklistsOnlyGlobal)
-   {
-      cBlacklist* tmpblacklist = Blacklists.First();
-      while(tmpblacklist)
-      {
-	if (tmpblacklist->isGlobal)
-	    blacklistEvents = tmpblacklist->Run(blacklistEvents, MarginStop);
-	tmpblacklist = Blacklists.Next(tmpblacklist);
-      }
-   }
-   if (blacklistMode == blacklistsAll)
-   {
-      cBlacklist* tmpblacklist = Blacklists.First();
-      while(tmpblacklist)
-      {
-         blacklistEvents = tmpblacklist->Run(blacklistEvents, MarginStop);
-         tmpblacklist = Blacklists.Next(tmpblacklist);
-      }
-   }
-   if (blacklistMode == blacklistsSelection)
-   {
-      cBlacklistObject* tmpblacklistObj = blacklists.First();
-      while(tmpblacklistObj)
-      {
-         blacklistEvents = tmpblacklistObj->blacklist->Run(blacklistEvents, MarginStop);
-         tmpblacklistObj = blacklists.Next(tmpblacklistObj);
-      }
-   }
-   return blacklistEvents;
+	cMutexLock BlacklistLock(&Blacklists);
+	cSearchResults* blacklistEvents = NULL;
+	if (blacklistMode == blacklistsOnlyGlobal)
+	{
+		cBlacklist* tmpblacklist = Blacklists.First();
+		while(tmpblacklist)
+		{
+			if (tmpblacklist->isGlobal)
+				blacklistEvents = tmpblacklist->Run(blacklistEvents, MarginStop);
+			tmpblacklist = Blacklists.Next(tmpblacklist);
+		}
+	}
+	if (blacklistMode == blacklistsAll)
+	{
+		cBlacklist* tmpblacklist = Blacklists.First();
+		while(tmpblacklist)
+		{
+			blacklistEvents = tmpblacklist->Run(blacklistEvents, MarginStop);
+			tmpblacklist = Blacklists.Next(tmpblacklist);
+		}
+	}
+	if (blacklistMode == blacklistsSelection)
+	{
+		cBlacklistObject* tmpblacklistObj = blacklists.First();
+		while(tmpblacklistObj)
+		{
+			blacklistEvents = tmpblacklistObj->blacklist->Run(blacklistEvents, MarginStop);
+			tmpblacklistObj = blacklists.Next(tmpblacklistObj);
+		}
+	}
+	return blacklistEvents;
 
 }
 

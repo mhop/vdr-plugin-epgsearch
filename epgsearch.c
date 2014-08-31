@@ -265,9 +265,9 @@ bool cPluginEpgsearch::Service(const char *Id, void *Data)
       {
          Epgsearch_enablesearchtimers_v1_0* serviceData = (Epgsearch_enablesearchtimers_v1_0*) Data;
          if (serviceData->enable && cSearchTimerThread::m_Instance == NULL)
-	   cSearchTimerThread::Init(this);
-	 else if (!serviceData->enable && cSearchTimerThread::m_Instance != NULL)
-	   cSearchTimerThread::Exit();
+					 cSearchTimerThread::Init(this);
+				 else if (!serviceData->enable && cSearchTimerThread::m_Instance != NULL)
+					 cSearchTimerThread::Exit();
       }
       return true;
    }

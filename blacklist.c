@@ -523,6 +523,12 @@ cEvent * cBlacklist::GetEventByBlacklist(const cSchedule *schedules, const cEven
       p1 = schedules->Events()->First();
 
   time_t tNow=time(NULL);
+
+	struct tm when;
+	when = *localtime(&tNow);
+	when.tm_mday += DAYS_SEARCH_MAX; 
+	time_t tScanEnd=mktime(&when);
+
   char* szTest = NULL;
   char* searchText = strdup(search);
 
@@ -547,152 +553,210 @@ cEvent * cBlacklist::GetEventByBlacklist(const cSchedule *schedules, const cEven
 
   for (cEvent *p = p1; p; p = schedules->Events()->Next(p))
   {
-     if(!p)
-     {
-        break;
-     }
-
-     if (szTest)
-     {
-	free(szTest);
-	szTest = NULL;
-     }
-
-     // ignore events without title
-     if (!p->Title() || strlen(p->Title()) == 0)
-	 continue;
-
-     msprintf(&szTest, "%s%s%s%s%s", (useTitle?p->Title():""), (useSubtitle||useDescription)?"~":"",
-	      (useSubtitle?p->ShortText():""),useDescription?"~":"",
-	      (useDescription?p->Description():""));
-
-     if (tNow < p->EndTime() + MarginStop * 60)
-     {
-        if (!useCase)
-	    ToLower(szTest);
-
-        if (useTime)
-        {
-		time_t tEvent = p->StartTime();
-		struct tm tmEvent;
-		localtime_r(&tEvent, &tmEvent);
-		int eventStart = tmEvent.tm_hour*100 + tmEvent.tm_min;
-		int eventStart2 = tmEvent.tm_hour*100 + tmEvent.tm_min + 2400;
-		if ((eventStart < searchStart || eventStart > searchStop) &&
-		    (eventStart2 < searchStart || eventStart2 > searchStop))
-			continue;
-        }
-        if (useDuration)
-        {
-		int duration = p->Duration()/60;
-		if (minSearchDuration > duration || maxSearchDuration < duration)
-		    continue;
-        }
-
-	if (useDayOfWeek)
-	{
-	    time_t tEvent = p->StartTime();
-	    struct tm tmEvent;
-	    localtime_r(&tEvent, &tmEvent);
-	    if (DayOfWeek >= 0 && DayOfWeek != tmEvent.tm_wday)
-		continue;
-	    if (DayOfWeek < 0)
-	    {
-		int iFound = 0;
-		for(int i=0; i<7; i++)
-		    if (abs(DayOfWeek) & (int)pow(2,i) && i == tmEvent.tm_wday)
-		    {
-			iFound = 1;
+		if(!p)
+		{
 			break;
-		    }
-		if (!iFound)
-		    continue;
-	    }
-	}
+		}
 
- 	if (strlen(szTest) > 0)
-	{
-	    if (!MatchesSearchMode(szTest, searchText, mode," ,;|~", fuzzyTolerance))
-		continue;
-	}
+		if (szTest)
+		{
+			free(szTest);
+			szTest = NULL;
+		}
 
-	if (useExtEPGInfo && !MatchesExtEPGInfo(p))
-	    continue;
-	pe=p;
-	break;
-     }
+		// ignore events without title
+		if (!p->Title() || strlen(p->Title()) == 0)
+			continue;
+
+		msprintf(&szTest, "%s%s%s%s%s", (useTitle?p->Title():""), (useSubtitle||useDescription)?"~":"",
+						 (useSubtitle?p->ShortText():""),useDescription?"~":"",
+						 (useDescription?p->Description():""));
+
+		if (tScanEnd < p->StartTime())
+			continue;
+		
+		if (tNow < p->EndTime() + MarginStop * 60)
+		{
+			if (!useCase)
+				ToLower(szTest);
+
+			if (useTime)
+			{
+				time_t tEvent = p->StartTime();
+				struct tm tmEvent;
+				localtime_r(&tEvent, &tmEvent);
+				int eventStart = tmEvent.tm_hour*100 + tmEvent.tm_min;
+				int eventStart2 = tmEvent.tm_hour*100 + tmEvent.tm_min + 2400;
+				if ((eventStart < searchStart || eventStart > searchStop) &&
+						(eventStart2 < searchStart || eventStart2 > searchStop))
+					continue;
+			}
+			if (useDuration)
+			{
+				int duration = p->Duration()/60;
+				if (minSearchDuration > duration || maxSearchDuration < duration)
+					continue;
+			}
+
+			if (useDayOfWeek)
+			{
+				time_t tEvent = p->StartTime();
+				struct tm tmEvent;
+				localtime_r(&tEvent, &tmEvent);
+				if (DayOfWeek >= 0 && DayOfWeek != tmEvent.tm_wday)
+					continue;
+				if (DayOfWeek < 0)
+				{
+					int iFound = 0;
+					for(int i=0; i<7; i++)
+						if (abs(DayOfWeek) & (int)pow(2,i) && i == tmEvent.tm_wday)
+						{
+							iFound = 1;
+							break;
+						}
+					if (!iFound)
+						continue;
+				}
+			}
+
+			if (strlen(szTest) > 0)
+			{
+				if (!MatchesSearchMode(szTest, searchText, mode," ,;|~", fuzzyTolerance))
+					continue;
+			}
+
+			if (useExtEPGInfo && !MatchesExtEPGInfo(p))
+				continue;
+			pe=p;
+			break;
+		}
   }
   if (szTest)
-	free(szTest);
+		free(szTest);
   free(searchText);
   return pe;
 }
 
-// returns a pointer array to the matching search results
-cSearchResults* cBlacklist::Run(cSearchResults* pSearchResults, int MarginStop)
+#ifdef BL_NEU
+cBlacklist::CheckEvent(Schedule, Event)
 {
-    LogFile.Log(3,"start search for blacklist '%s'", search);
-
-    cSchedulesLock schedulesLock;
-    const cSchedules *schedules;
-    schedules = cSchedules::Schedules(schedulesLock);
-    if(!schedules) {
-	LogFile.Log(1,"schedules are currently locked! try again later.");
-	return NULL;
-    }
-
-    const cSchedule *Schedule = schedules->First();
-
-    while (Schedule) {
-	cChannel* channel = Channels.GetByChannelID(Schedule->ChannelID(),true,true);
-	if (!channel)
-	{
-	    Schedule = (const cSchedule *)schedules->Next(Schedule);
+  cList<cBlacklistObject> blacklists;
+	for(bl inblacklists) 
+  {
+		cChannel* channel = Channels.GetByChannelID(Schedule->ChannelID(),true,true);
+		if (!channel)
+		{
 	    continue;
-	}
+		}
 
-        if (useChannel == 1 && channelMin && channelMax)
-	{
+		if (useChannel == 1 && channelMin && channelMax)
+		{
 	    if (channelMin->Number() > channel->Number() || channelMax->Number() < channel->Number())
 	    {
-		Schedule = (const cSchedule *)schedules->Next(Schedule);
-		continue;
+				continue;
 	    }
-	}
-        if (useChannel == 2 && channelGroup)
-	{
+		}
+		if (useChannel == 2 && channelGroup)
+		{
 	    cChannelGroup* group = ChannelGroups.GetGroupByName(channelGroup);
 	    if (!group || !group->ChannelInGroup(channel))
 	    {
-		Schedule = (const cSchedule *)schedules->Next(Schedule);
-		continue;
+				continue;
 	    }
-	}
-
-	if (useChannel == 3)
-	{
+		}
+		if (useChannel == 3)
+		{
 	    if (channel->Ca() >= CA_ENCRYPTED_MIN)
 	    {
-		Schedule = (const cSchedule *)schedules->Next(Schedule);
-		continue;
+				continue;
 	    }
-	}
-
-        const cEvent *pPrevEvent = NULL;
-        do {
+		}
+		const cEvent *pPrevEvent = NULL;
+		do {
 	    const cEvent* event = GetEventByBlacklist(Schedule, pPrevEvent, MarginStop);
 	    pPrevEvent = event;
 	    if (event && Channels.GetByChannelID(event->ChannelID(),true,true))
 	    {
-		if (!pSearchResults) pSearchResults = new cSearchResults;
-		pSearchResults->Add(new cSearchResult(event, this));
+				if (!pSearchResults) pSearchResults = new cSearchResults;
+				pSearchResults->Add(new cSearchResult(event, this));
 	    }
-        } while(pPrevEvent);
-        Schedule = (const cSchedule *)schedules->Next(Schedule);
-    }
-    LogFile.Log(3,"found %d event(s) for blacklist '%s'", pSearchResults?pSearchResults->Count():0, search);
+		} while(pPrevEvent);
+		Schedule = (const cSchedule *)schedules->Next(Schedule);
+	}
+	LogFile.Log(3,"found %d event(s) for blacklist '%s'", pSearchResults?pSearchResults->Count():0, search);
+  return pSearchResults;
+}
+#endif 
+// returns a pointer array to the matching search results
+cSearchResults* cBlacklist::Run(cSearchResults* pSearchResults, int MarginStop)
+{
+	LogFile.Log(3,"start search for blacklist '%s'", search);
 
-    return pSearchResults;
+	cSchedulesLock schedulesLock;
+	const cSchedules *schedules;
+	schedules = cSchedules::Schedules(schedulesLock);
+	if(!schedules) {
+		LogFile.Log(1,"schedules are currently locked! try again later.");
+		return NULL;
+	}
+
+	const cSchedule *Schedule = schedules->First();
+
+	while (Schedule) {
+		cChannel* channel = Channels.GetByChannelID(Schedule->ChannelID(),true,true);
+		if (!channel)
+		{
+	    Schedule = (const cSchedule *)schedules->Next(Schedule);
+	    continue;
+		}
+		if (channel->Number()>CHANNEL_SEARCH_MAX)
+		{
+	    Schedule = (const cSchedule *)schedules->Next(Schedule);
+	    continue;
+		}
+
+		if (useChannel == 1 && channelMin && channelMax)
+		{
+	    if (channelMin->Number() > channel->Number() || channelMax->Number() < channel->Number())
+	    {
+				Schedule = (const cSchedule *)schedules->Next(Schedule);
+				continue;
+	    }
+		}
+		if (useChannel == 2 && channelGroup)
+		{
+	    cChannelGroup* group = ChannelGroups.GetGroupByName(channelGroup);
+	    if (!group || !group->ChannelInGroup(channel))
+	    {
+				Schedule = (const cSchedule *)schedules->Next(Schedule);
+				continue;
+	    }
+		}
+
+		if (useChannel == 3)
+		{
+	    if (channel->Ca() >= CA_ENCRYPTED_MIN)
+	    {
+				Schedule = (const cSchedule *)schedules->Next(Schedule);
+				continue;
+	    }
+		}
+
+		const cEvent *pPrevEvent = NULL;
+		do {
+	    const cEvent* event = GetEventByBlacklist(Schedule, pPrevEvent, MarginStop);
+	    pPrevEvent = event;
+	    if (event && Channels.GetByChannelID(event->ChannelID(),true,true))
+	    {
+				if (!pSearchResults) pSearchResults = new cSearchResults;
+				pSearchResults->Add(new cSearchResult(event, this));
+	    }
+		} while(pPrevEvent);
+		Schedule = (const cSchedule *)schedules->Next(Schedule);
+	}
+	LogFile.Log(3,"found %d event(s) for blacklist '%s'", pSearchResults?pSearchResults->Count():0, search);
+
+	return pSearchResults;
 }
 
 bool cBlacklist::MatchesExtEPGInfo(const cEvent* e)
