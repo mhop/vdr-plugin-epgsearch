@@ -59,7 +59,10 @@ class cConflictCheckTimerObj : public cTimerObj
     const cEvent* Event();
     const cEvent* SetEventFromSchedule();
     int Matches(const cEvent *Event, int *Overlap) const;
-    cTimer* OrigTimer() {return Timers.GetTimer(timer); }
+    cTimer* OrigTimer(cTimers* timers)
+    {
+      return timers->GetTimer((cTimer*)timer);
+    }
 };
 
 class TimerObjSort

@@ -33,13 +33,13 @@ The project's page is at http://winni.vdr-developer.org/epgsearch
 class cMenuMyScheduleItem : public cOsdItem {
 public:
   const cEvent *event;
-  cChannel *channel;
+  const cChannel *channel;
   showMode mode;
   eTimerMatch timerMatch;
   bool inSwitchList;
   cMenuTemplate* menuTemplate;
 
-  cMenuMyScheduleItem(const cEvent *Event, cChannel *Channel = NULL, showMode ShowMode = showNow, cMenuTemplate* menuTemplate = NULL);
+  cMenuMyScheduleItem(const cEvent *Event, const cChannel *Channel = NULL, showMode ShowMode = showNow, cMenuTemplate* menuTemplate = NULL);
   virtual bool Update(bool Force = false);
   virtual void SetMenuItem(cSkinDisplayMenu *DisplayMenu, int Index, bool Current, bool Selectable);
 
@@ -68,7 +68,7 @@ private:
   static int currentChannel;
   cEventObjects eventObjects;
  public:
-  static cChannel *scheduleChannel;
+  static const cChannel *scheduleChannel;
   static cList<cShowMode> showModes;
   static showMode currentShowMode;
   static int shiftTime;

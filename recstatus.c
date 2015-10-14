@@ -193,7 +193,7 @@ void cRecStatusMonitor::Recording(const cDevice *Device, const char *Name, const
    }
 }
 
-int cRecStatusMonitor::TimerRecDevice(cTimer* timer)
+int cRecStatusMonitor::TimerRecDevice(const cTimer* timer)
 {
    if (!timer) return 0;
    for (cRecDoneTimerObj *tiR = TimersRecording.First(); tiR; tiR = TimersRecording.Next(tiR))

@@ -43,7 +43,7 @@ protected:
     virtual void Recording(const cDevice *Device, const char *Name, const char*, bool On);
  public:
     cRecStatusMonitor();
-    int TimerRecDevice(cTimer*);
+    int TimerRecDevice(const cTimer*);
     bool IsPesRecording(cRecording *pRecording);
     int RecLengthInSecs(cRecording *pRecording);
 };

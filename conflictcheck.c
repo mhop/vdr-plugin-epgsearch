@@ -73,9 +73,14 @@ const cEvent* cConflictCheckTimerObj::Event()
 
 const cEvent* cConflictCheckTimerObj::SetEventFromSchedule()
 {
+#if VDRVERSNUM > 20300
+    LOCK_SCHEDULES_READ;
+    const cSchedules *schedules = Schedules;
+#else
     cSchedulesLock SchedulesLock;
-    const cSchedules* Schedules = NULL;
-    if (!(Schedules = cSchedules::Schedules(SchedulesLock)))
+    const cSchedules* schedules = cSchedules::Schedules(SchedulesLock);
+#endif
+    if (!schedules)
 	return NULL;
 
     const cSchedule *Schedule = Schedules->GetSchedule(timer->Channel());
@@ -262,8 +267,14 @@ cList<cConflictCheckTimerObj>* cConflictCheck::CreateCurrentTimerList()
 
     // collect single event timers
     time_t tMax = 0;
-    cTimer* ti = NULL;
-    for (ti = Timers.First(); ti; ti = Timers.Next(ti))
+#if VDRVERSNUM > 20300
+    LOCK_TIMERS_READ;
+    const cTimers *vdrtimers = Timers;
+#else
+    const cTimers *vdrtimers = &Timers;
+#endif
+    const cTimer* ti = NULL;
+    for (ti = vdrtimers->First(); ti; ti = vdrtimers->Next(ti))
     {
 	tMax = max(tMax, ti->StartTime());
 	if (!ti->IsSingleEvent()) continue;
@@ -291,7 +302,7 @@ cList<cConflictCheckTimerObj>* cConflictCheck::CreateCurrentTimerList()
     // collect repeating timers from now until the date of the timer with tMax
     time_t maxCheck = time(NULL) + min(14,EPGSearchConfig.checkMaxDays) * SECSINDAY;
     tMax = max(tMax, maxCheck);
-    for (ti = Timers.First(); ti; ti = Timers.Next(ti))
+    for (ti = vdrtimers->First(); ti; ti = vdrtimers->Next(ti))
     {
 	if (ti->IsSingleEvent()) continue;
 	time_t day = time(NULL);
@@ -683,7 +694,13 @@ bool cConflictCheck::TimerInConflict(cTimer* timer)
 		{
 		    for (it2 = (*it)->concurrentTimers->begin(); it2 != (*it)->concurrentTimers->end(); ++it2)
 		    {
-			if ((*it2)->OrigTimer() == timer)
+#if VDRVERSNUM > 20300
+			LOCK_TIMERS_WRITE;
+			cTimers *vdrtimers = Timers;
+#else
+			cTimers *vdrtimers = &Timers;
+#endif
+			if ((*it2)->OrigTimer(vdrtimers) == timer)
 			    return true;
 		    }
 		}
@@ -706,7 +723,13 @@ void cConflictCheck::EvaluateConflCheckCmd()
 	    if ((*it) && !(*it)->ignore)
 	      {
 		string result = EPGSearchConfig.conflCheckCmd;
-		if (!(*it)->OrigTimer())
+#if VDRVERSNUM > 20300
+		LOCK_TIMERS_WRITE;
+		cTimers *vdrtimers = Timers;
+#else
+		cTimers *vdrtimers = &Timers;
+#endif
+		if (!(*it)->OrigTimer(vdrtimers))
 		  {
 		    LogFile.Log(3,"timer has disappeared meanwhile");
 		    continue;

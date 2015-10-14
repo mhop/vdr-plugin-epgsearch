@@ -188,8 +188,8 @@ long getAddrFromString(const char* hostnameOrIp, struct sockaddr_in* addr);
 // --- cTimerObj --------------------------------------------------------
 class cTimerObj : public cListObject {
 public:
-    cTimer* timer;
-    cTimerObj(cTimer* Timer) : timer(Timer) {}
+    const cTimer* timer;
+    cTimerObj(const cTimer* Timer) : timer(Timer) {}
     virtual ~cTimerObj() { timer = NULL;  } // do not delete anything!
 };
 

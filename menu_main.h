@@ -38,7 +38,7 @@ class cMenuSearchMain : public cOsdMenu {
   int currentChannel;
   eOSState Record(void);
   eOSState ExtendedSearch(void);
-  void PrepareSchedule(cChannel *Channel);
+  void PrepareSchedule(const cChannel *Channel);
   eOSState Commands(eKeys Key);
   void SetHelpKeys(bool Force = false);
   int GetTab(int Tab);
