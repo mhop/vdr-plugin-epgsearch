@@ -83,7 +83,7 @@ const cEvent* cConflictCheckTimerObj::SetEventFromSchedule()
     if (!schedules)
 	return NULL;
 
-    const cSchedule *Schedule = Schedules->GetSchedule(timer->Channel());
+    const cSchedule *Schedule = schedules->GetSchedule(timer->Channel());
     if (Schedule && Schedule->Events()->First())
     {
 	const cEvent *Event = NULL;

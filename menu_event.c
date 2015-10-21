@@ -106,7 +106,7 @@ void cMenuEventSearch::Set()
       LOCK_TIMERS_READ;
       const cTimers *vdrtimers = Timers;
 #else
-      const cTimers *vdrtimers = &Timers;
+      cTimers *vdrtimers = &Timers;
 #endif
       vdrtimers->GetMatch(event, &timerMatch);
       const char* szRed = trVDR("Button$Record");

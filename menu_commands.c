@@ -106,7 +106,7 @@ eOSState cMenuSearchCommands::Switch(void)
    LOCK_CHANNELS_READ;
    const cChannels *vdrchannels = Channels;
 #else
-   Channels *vdrchannels = &Channels;
+   cChannels *vdrchannels = &Channels;
 #endif
    const cChannel *channel = vdrchannels->GetByChannelID(event->ChannelID(), true, true);
    if (channel && cDevice::PrimaryDevice()->SwitchChannel(channel, true))

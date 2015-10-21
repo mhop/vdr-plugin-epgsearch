@@ -606,7 +606,11 @@ eOSState cMenuWhatsOnSearch::Record(void)
          PrepareTimerFile(item->event, timer);
       }
       else
+#if VDRVERSNUM > 20300
          timer = new cTimer(false, false, item->channel);
+#else
+         timer = new cTimer(false, false, (cChannel*)item->channel);
+#endif
 
       cTimer *t = vdrtimers->GetTimer(timer);
       if (EPGSearchConfig.onePressTimerCreation == 0 || t || !item->event || (!t && item->event && item->event->StartTime() - (Setup.MarginStart+2) * 60 < time(NULL)))

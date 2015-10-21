@@ -337,12 +337,11 @@ bool cBlacklist::Parse(const char *s)
 			char *channelMaxbuffer = NULL;
 			int channels = sscanf(value, "%m[^|]|%m[^|]", &channelMinbuffer, &channelMaxbuffer);
 #endif
-			const cChannels *vdrchannels = NULL;
 #if VDRVERSNUM > 20300
 			LOCK_CHANNELS_READ;
-			vdrchannels = Channels;
+			const cChannels *vdrchannels = Channels;
 #else
-			vdrchannels = &Channels;
+			cChannels *vdrchannels = &Channels;
 #endif
 			channelMin = vdrchannels->GetByChannelID(tChannelID::FromString(channelMinbuffer), true, true);
 			if (!channelMin)
