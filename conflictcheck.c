@@ -680,7 +680,7 @@ void cConflictCheck::AddConflict(cConflictCheckTimerObj* TimerObj, cConflictChec
     LogFile.Log(3,"conflict found for timer '%s' (%s, channel %s)", TimerObj->timer->File(), DAYDATETIME(TimerObj->start), CHANNELNAME(TimerObj->timer->Channel()));
 }
 
-bool cConflictCheck::TimerInConflict(cTimer* timer)
+bool cConflictCheck::TimerInConflict(const cTimer* timer)
 {
     for(cConflictCheckTime* checkTime = failedList->First(); checkTime; checkTime = failedList->Next(checkTime))
     {

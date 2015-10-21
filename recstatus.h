@@ -32,7 +32,7 @@ public:
     cRecDone* recDone;
     time_t lastBreak;
 public:
-    cRecDoneTimerObj(cTimer* Timer, int DeviceNr) : cTimerObj(Timer), deviceNr(DeviceNr), recDone(NULL), lastBreak(0) {}
+    cRecDoneTimerObj(const cTimer* Timer, int DeviceNr) : cTimerObj(Timer), deviceNr(DeviceNr), recDone(NULL), lastBreak(0) {}
     ~cRecDoneTimerObj() { timer = NULL; recDone = NULL; } // do not delete anything!
 };
 
@@ -44,8 +44,8 @@ protected:
  public:
     cRecStatusMonitor();
     int TimerRecDevice(const cTimer*);
-    bool IsPesRecording(cRecording *pRecording);
-    int RecLengthInSecs(cRecording *pRecording);
+    bool IsPesRecording(const cRecording *pRecording);
+    int RecLengthInSecs(const cRecording *pRecording);
 };
 
 extern cRecStatusMonitor* gl_recStatusMonitor;

@@ -76,7 +76,12 @@ cMenuMyEditTimer::cMenuMyEditTimer(cTimer *Timer, bool New, const cEvent* Event,
 	Set();
 	SetHelp(addIfConfirmed?NULL:trVDR("Button$Delete"), NULL, NULL, NULL);
     }
+#if VDRVERSNUM > 20300
+  vdrtimers = cTimers::GetTimersWrite(timersStateKey);
+#else
+  vdrtimers = &Timers;
   Timers.IncBeingEdited();
+#endif
 }
 
 void cMenuMyEditTimer::SplitFile()
@@ -162,7 +167,13 @@ void cMenuMyEditTimer::Set()
     }
     else if (IsSingleEvent() && event)
     {
-	checkmode = DefTimerCheckModes.GetMode(Channels.GetByNumber(channel));
+#if VDRVERSNUM > 20300
+	LOCK_CHANNELS_READ;
+	const cChannels *vdrchannels = Channels;
+#else
+	cChannels *vdrchannels = &Channels;
+#endif
+	checkmode = DefTimerCheckModes.GetMode(vdrchannels->GetByNumber(channel));
 	char* checkmodeAux = GetAuxValue(timer, "update");
 	if (checkmodeAux)
 	{
@@ -196,7 +207,12 @@ cMenuMyEditTimer::~cMenuMyEditTimer()
 {
   if (timer && addIfConfirmed)
      delete timer; // apparently it wasn't confirmed
+#if VDRVERSNUM > 20300
+  if (vdrtimers != NULL)
+     timersStateKey.Remove();
+#else
   Timers.DecBeingEdited();
+#endif
 }
 
 void cMenuMyEditTimer::HandleSubtitle()
@@ -238,15 +254,22 @@ eOSState cMenuMyEditTimer::DeleteTimer()
 	    if (timer->Recording()) {
 		if (Interface->Confirm(trVDR("Timer still recording - really delete?"))) {
 		    timer->Skip();
+#if VDRVERSNUM > 20300
+		    cRecordControls::Process(vdrtimers, time(NULL));
+#else
 		    cRecordControls::Process(time(NULL));
+#endif
 		}
 		else
 		    return osContinue;
 	    }
 	    LogFile.iSysLog("deleting timer %s", *timer->ToDescr());
-	    Timers.Del(timer);
+     if (vdrtimers)
+	       vdrtimers->Del(timer);
 	    gl_timerStatusMonitor->SetConflictCheckAdvised();
+#if VDRVERSNUM < 20300
 	    Timers.SetModified();
+#endif
 	    return osBack;
         }
     }
@@ -324,7 +347,13 @@ eOSState cMenuMyEditTimer::ProcessKey(eKeys Key)
 	{
 	    case kOk:
 	    {
-		cChannel *ch = Channels.GetByNumber(channel);
+#if VDRVERSNUM > 20300
+		LOCK_CHANNELS_READ;
+		const cChannels *vdrchannels = Channels;
+#else
+		cChannels *vdrchannels = &Channels;
+#endif
+		const cChannel *ch = vdrchannels->GetByNumber(channel);
 		if (!ch)
 		{
 		  ERROR(tr("*** Invalid Channel ***"));
@@ -405,12 +434,19 @@ eOSState cMenuMyEditTimer::ProcessKey(eKeys Key)
                     free(tmpFile);
                     free(tmpDir);
 
-                    if (addIfConfirmed)
-                      Timers.Add(timer);
+                    if (addIfConfirmed && vdrtimers != NULL)
+                      vdrtimers->Add(timer);
+#if VDRVERSNUM > 20300
+                    LOCK_SCHEDULES_READ;
+                    timer->SetEventFromSchedule(Schedules);
+#else
                     timer->SetEventFromSchedule();
+#endif
                     timer->Matches();
                     gl_timerStatusMonitor->SetConflictCheckAdvised();
+#if VDRVERSNUM < 20300
                     Timers.SetModified();
+#endif
                     addIfConfirmed = false;
                 } else {
 		    free(tmpFile);

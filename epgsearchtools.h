@@ -157,7 +157,7 @@ cSearchExt* TriggeredFromSearchTimer(const cTimer* timer);
 int TriggeredFromSearchTimerID(const cTimer* timer);
 double FuzzyMatch(const char* s1, const char* s2, int maxLength);
 bool DescriptionMatches(const char* eDescr, const char* rDescr, int matchLimit = 90);
-const cEvent* GetEvent(cTimer* timer);
+const cEvent* GetEvent(const cTimer* timer);
 char* GetRawDescription(const char* descr);
 void PrepareTimerFile(const cEvent* event, cTimer* timer);
 int CompareEventTime(const void *p1, const void *p2);

@@ -49,7 +49,13 @@ void cRecStatusMonitor::Recording(const cDevice *Device, const char *Name, const
       if (EPGSearchConfig.checkTimerConflOnRecording)
          cConflictCheckThread::Init((cPluginEpgsearch*)cPluginManager::GetPlugin("epgsearch"), true);
 
-      for (cTimer *ti = Timers.First(); ti; ti = Timers.Next(ti))
+#if VDRVERSNUM > 20300
+      LOCK_TIMERS_READ;
+      const cTimers *vdrtimers = Timers;
+#else
+      cTimers *vdrtimers = &Timers;
+#endif
+      for (const cTimer *ti = vdrtimers->First(); ti; ti = vdrtimers->Next(ti))
          if (ti->Recording())
          {
             // check if this is a new entry
@@ -113,7 +119,13 @@ void cRecStatusMonitor::Recording(const cDevice *Device, const char *Name, const
       {
          // check if timer still exists
          bool found = false;
-         for (cTimer *ti = Timers.First(); ti; ti = Timers.Next(ti))
+#if VDRVERSNUM > 20300
+         LOCK_TIMERS_READ;
+         const cTimers *vdrtimers = Timers;
+#else
+         cTimers *vdrtimers = &Timers;
+#endif
+         for (const cTimer *ti = vdrtimers->First(); ti; ti = vdrtimers->Next(ti))
             if (ti == tiR->timer)
             {
                found = true;
@@ -130,7 +142,13 @@ void cRecStatusMonitor::Recording(const cDevice *Device, const char *Name, const
                // check if recording has ended before timer end
 
                bool complete = true;
-	       cRecording *pRecording = Recordings.GetByName(Filename);
+#if VDRVERSNUM > 20300
+	       LOCK_RECORDINGS_READ;
+	       const cRecordings *vdrrecordings = Recordings;
+#else
+	       cRecordings *vdrrecordings = &Recordings;
+#endif
+	       const cRecording *pRecording = vdrrecordings->GetByName(Filename);
 	       long timerLengthSecs = tiR->timer->StopTime()-tiR->timer->StartTime();
 	       int recFraction = 100;
 	       if (pRecording && timerLengthSecs)
@@ -201,7 +219,7 @@ int cRecStatusMonitor::TimerRecDevice(const cTimer* timer)
    return 0;
 }
 
-bool cRecStatusMonitor::IsPesRecording(cRecording *pRecording)
+bool cRecStatusMonitor::IsPesRecording(const cRecording *pRecording)
 {
 #if VDRVERSNUM < 10703
   return true;
@@ -214,7 +232,7 @@ bool cRecStatusMonitor::IsPesRecording(cRecording *pRecording)
 
 #if VDRVERSNUM < 10703
 
-int cRecStatusMonitor::RecLengthInSecs(cRecording *pRecording)
+int cRecStatusMonitor::RecLengthInSecs(const cRecording *pRecording)
 {
   struct stat buf;
   cString fullname = cString::sprintf("%s%s", pRecording->FileName(), "/index.vdr");
@@ -249,7 +267,7 @@ struct tIndexTs {
   }
   };
 
-int cRecStatusMonitor::RecLengthInSecs(cRecording *pRecording)
+int cRecStatusMonitor::RecLengthInSecs(const cRecording *pRecording)
 {
   struct stat buf;
   cString fullname = cString::sprintf("%s%s", pRecording->FileName(), IsPesRecording(pRecording) ? LOC_INDEXFILESUFFIX ".vdr" : LOC_INDEXFILESUFFIX);

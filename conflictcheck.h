@@ -283,7 +283,7 @@ class cConflictCheck
     cList<cConflictCheckTimerObj>* GetTimers() { return timerList; }
     void AddConflict(cConflictCheckTimerObj* TimerObj, cConflictCheckTime* Checktime, std::set<cConflictCheckTimerObj*>& pendingTimers);
     int ProcessCheckTime(cConflictCheckTime* checkTime);
-    bool TimerInConflict(cTimer*);
+    bool TimerInConflict(const cTimer*);
     void EvaluateConflCheckCmd();
     eModuleStatus CamSlotModuleStatus(cCamSlot *CamSlot);
 };

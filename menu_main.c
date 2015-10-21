@@ -572,7 +572,7 @@ eOSState cMenuSearchMain::ProcessKey(eKeys Key)
 	}
     }
     if (!HasSubMenu()) {
-      cChannel *ch = cMenuWhatsOnSearch::ScheduleChannel();
+      const cChannel *ch = cMenuWhatsOnSearch::ScheduleChannel();
       InWhatsOnMenu = false;
       InFavoritesMenu = false;
       if (ch) {

@@ -30,6 +30,10 @@ The project's page is at http://winni.vdr-developer.org/epgsearch
 // --- cMenuMyEditTimer --------------------------------------------------------
 class cMenuMyEditTimer : public cOsdMenu {
 private:
+#if VDRVERSNUM > 20300
+  cStateKey timersStateKey;
+#endif
+  cTimers *vdrtimers;
   cTimer *timer;
   const cEvent* event;
   int channel;

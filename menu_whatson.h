@@ -52,7 +52,7 @@ class cMenuMyScheduleSepItem : public cMenuMyScheduleItem {
                       // if VDR had a SetItemSeparator function for this
 public:
 
-  cMenuMyScheduleSepItem(const cEvent *Event, cChannel *Channel = NULL);
+  cMenuMyScheduleSepItem(const cEvent *Event, const cChannel *Channel = NULL);
   ~cMenuMyScheduleSepItem();
   virtual bool Update(bool Force = false);
   virtual void SetMenuItem(cSkinDisplayMenu *DisplayMenu, int Index, bool Current, bool Selectable);
@@ -80,7 +80,7 @@ private:
   void LoadSchedules();
   static int CurrentChannel(void) { return currentChannel; }
   static void SetCurrentChannel(int ChannelNr) { currentChannel = ChannelNr; }
-  static cChannel *ScheduleChannel(cChannel* forceChannel = NULL);
+  static const cChannel *ScheduleChannel(const cChannel* forceChannel = NULL);
   virtual eOSState ProcessKey(eKeys Key);
   virtual eOSState Switch(void);
   virtual eOSState Shift(int);

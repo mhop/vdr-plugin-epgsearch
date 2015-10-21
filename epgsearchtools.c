@@ -519,7 +519,7 @@ bool DescriptionMatches(const char* eDescr, const char* rDescr, int matchLimit)
    return false;
 }
 
-const cEvent* GetEvent(cTimer* timer)
+const cEvent* GetEvent(const cTimer* timer)
 {
    const cEvent* event = NULL;
    const cChannel *channel = timer->Channel();
