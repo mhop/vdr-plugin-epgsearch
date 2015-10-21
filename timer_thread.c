@@ -89,11 +89,20 @@ void cTimerThread::Action(void)
             m_Active=false;
             break;
         }
+#if VDRVERSNUM > 20300
+	cStateKey timersStateKey;
+	const cTimers *vdrtimers = cTimers::GetTimersRead(timersStateKey);
+	if (vdrtimers != NULL)
+	    timersStateKey.Remove();
+	else
+	    continue;
+#else
 	if (Timers.BeingEdited())
 	{
 	    sleepSec(1);
 	    continue;
 	}
+#endif
 	bool bSuccess = SendViaSVDRP(m_cmd);
 	if (!bSuccess)
 	{

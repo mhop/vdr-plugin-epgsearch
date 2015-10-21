@@ -115,7 +115,7 @@ bool cMailTimerNotification::operator< (const cMailTimerNotification &N) const
 
 // -------------------------
 // cMailDelTimerNotification
-cMailDelTimerNotification::cMailDelTimerNotification(cTimer* pTimer, const cEvent* pEvent, const string& templ)
+cMailDelTimerNotification::cMailDelTimerNotification(const cTimer* pTimer, const cEvent* pEvent, const string& templ)
 {
     if (!pTimer || !pTimer->Channel()) return;
 
@@ -361,7 +361,7 @@ void cMailUpdateNotifier::AddModTimerNotification(tEventID EventID, tChannelID C
   modTimers.insert(N);
 }
 
-void cMailUpdateNotifier::AddRemoveTimerNotification(cTimer* t, const cEvent* e)
+void cMailUpdateNotifier::AddRemoveTimerNotification(const cTimer* t, const cEvent* e)
 {
     string templTimer = GetTemplValue(mailTemplate, "timer");
     cMailDelTimerNotification N(t, e, templTimer);

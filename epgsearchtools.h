@@ -70,7 +70,7 @@ using std::string;
 #undef CONFIGDIR
 #define CONFIGDIR (!ConfigDir?cPlugin::ConfigDirectory():ConfigDir)
 
-#define CHNUMWIDTH  (numdigits(Channels.MaxNumber()) + 2)
+#define CHNUMWIDTH  (numdigits(vdrchannels->MaxNumber()) + 2)
 
 #define SHORTTEXT(EVENT) \
   (EVENT && EPGSearchConfig.showShortText && !isempty((EVENT)->ShortText()))?" ~ ":"", \
@@ -196,7 +196,7 @@ public:
 // --- cTimerObjList --------------------------------------------------------
 class cTimerObjList : public cList<cTimerObj> {
 public:
-    void DelTimer(cTimer* t)
+    void DelTimer(const cTimer* t)
 	{
 	    for (cTimerObj* pTObj = First(); pTObj; pTObj = Next(pTObj))
 		if (pTObj->timer == t)

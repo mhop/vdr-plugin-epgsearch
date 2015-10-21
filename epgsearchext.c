@@ -1276,7 +1276,7 @@ void cSearchExt::CheckRepeatTimers(cSearchResults* pResults)
          }
       }
       bool dummy;
-      cTimer* timer = cSearchTimerThread::GetTimer(this, pEvent, dummy);
+      const cTimer* timer = cSearchTimerThread::GetTimer(this, pEvent, dummy);
       if (timer && !timer->HasFlags(tfActive))
       {
          LogFile.Log(3,"skip '%s~%s' (%s - %s, channel %d), existing timer disabled", pEvent->Title()?pEvent->Title():"no title", pEvent->ShortText()?pEvent->ShortText():"no subtitle", GETDATESTRING(pEvent), GETTIMESTRING(pEvent), ChannelNrFromEvent(pEvent));
