@@ -67,10 +67,16 @@ cMenuSearchResultsItem::cMenuSearchResultsItem(const cEvent *EventInfo, bool Epi
    menuTemplate = MenuTemplate?MenuTemplate:cTemplFile::GetTemplateByName("MenuSearchResults");
    search = Search;
    inSwitchList = false;
-   Update(true);
+#if VDRVERSNUM > 20300
+   LOCK_TIMERS_READ;
+   const cTimers *vdrtimers = Timers;
+#else
+   cTimers *vdrtimers = &Timers;
+#endif
+   Update(vdrtimers, true);
 }
 
-bool cMenuSearchResultsItem::Update(bool Force)
+bool cMenuSearchResultsItem::Update(const cTimers* vdrtimers, bool Force)
 {
    if (!menuTemplate)
       return false;
@@ -80,12 +86,6 @@ bool cMenuSearchResultsItem::Update(bool Force)
    eTimerMatch OldTimerMatch = timerMatch;
    bool OldInSwitchList = inSwitchList;
    bool hasMatch = false;
-#if VDRVERSNUM > 20300
-   LOCK_TIMERS_READ;
-   const cTimers *vdrtimers = Timers;
-#else
-   cTimers *vdrtimers = &Timers;
-#endif
    const cTimer* timer = NULL;
    if (event) timer = vdrtimers->GetMatch(event, &timerMatch);
    if (event) inSwitchList = (SwitchTimers.InSwitchList(event)!=NULL);
@@ -234,11 +234,11 @@ int cMenuSearchResults::GetTab(int Tab)
    return menuTemplate->Tab(Tab-1);
 }
 
-bool cMenuSearchResults::Update(void)
+bool cMenuSearchResults::Update(const cTimers* vdrtimers)
 {
    bool result = false;
    for (cOsdItem *item = First(); item; item = Next(item)) {
-      if (((cMenuSearchResultsItem *)item)->Update())
+      if (((cMenuSearchResultsItem *)item)->Update(vdrtimers))
          result = true;
    }
    return result;
@@ -318,7 +318,7 @@ eOSState cMenuSearchResults::Record(void)
 
          if (HasSubMenu())
             CloseSubMenu();
-         if (Update())
+         if (Update(vdrtimers))
             Display();
          SetHelpKeys();
       }
@@ -486,7 +486,13 @@ eOSState cMenuSearchResults::ProcessKey(eKeys Key)
    }
    if (!HasSubMenu())
    {
-      if ((HadSubMenu || gl_TimerProgged) && Update())
+#if VDRVERSNUM > 20300
+      LOCK_TIMERS_READ;
+      const cTimers *vdrtimers = Timers;
+#else
+      cTimers *vdrtimers = &Timers;
+#endif
+      if ((HadSubMenu || gl_TimerProgged) && Update(vdrtimers))
       {
          if (gl_TimerProgged) // when using epgsearch's timer edit menu, update is delayed because of SVDRP
          {
