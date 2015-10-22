@@ -174,11 +174,11 @@ void cMenuSearchMain::PrepareSchedule(const cChannel *Channel)
     }
 }
 
-bool cMenuSearchMain::Update(void)
+bool cMenuSearchMain::Update(const cTimers* vdrtimers)
 {
   bool result = false;
   for (cOsdItem *item = First(); item; item = Next(item)) {
-      if (item->Selectable() && ((cMenuMyScheduleItem *)item)->Update())
+      if (item->Selectable() && ((cMenuMyScheduleItem *)item)->Update(vdrtimers))
          result = true;
       }
   return result;
@@ -256,7 +256,7 @@ eOSState cMenuSearchMain::Record(void)
 
 	 if (HasSubMenu())
 	     CloseSubMenu();
-	 if (Update())
+	 if (Update(vdrtimers))
 	     Display();
 	 SetHelpKeys();
      }
@@ -575,6 +575,12 @@ eOSState cMenuSearchMain::ProcessKey(eKeys Key)
       const cChannel *ch = cMenuWhatsOnSearch::ScheduleChannel();
       InWhatsOnMenu = false;
       InFavoritesMenu = false;
+#if VDRVERSNUM > 20300
+      LOCK_TIMERS_READ;
+      const cTimers *vdrtimers = Timers;
+#else
+      cTimers *vdrtimers = &Timers;
+#endif
       if (ch) {
 	// when switch from the other menus to the schedule, try to keep the same time
        	if (cMenuWhatsOnSearch::shiftTime)
@@ -591,7 +597,7 @@ eOSState cMenuSearchMain::ProcessKey(eKeys Key)
 	}
 	Display();
       }
-      else if ((HadSubMenu || gl_TimerProgged) && Update())
+      else if ((HadSubMenu || gl_TimerProgged) && Update(vdrtimers))
       {
 	  if (gl_TimerProgged) // when using epgsearch's timer edit menu, update is delayed because of SVDRP
 	  {
