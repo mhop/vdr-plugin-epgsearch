@@ -135,7 +135,13 @@ void cMenuMyEditTimer::Set()
 #ifdef USE_PINPLUGIN
     if (cOsd::pinValid || !fskProtection) Add(new cMenuEditChanItem(tr("Channel"), &channel));
     else {
-      cString buf = cString::sprintf("%s\t%s", tr("Channel"), Channels.GetByNumber(channel)->Name());
+#if VDRVERSNUM > 20300
+        LOCK_CHANNELS_READ;
+        const cChannels *vdrchannels = Channels;
+#else
+        cChannels *vdrchannels = &Channels;
+#endif
+      cString buf = cString::sprintf("%s\t%s", tr("Channel"), vdrchannels->GetByNumber(channel)->Name());
       Add(new cOsdItem(buf));
     }
 #else
