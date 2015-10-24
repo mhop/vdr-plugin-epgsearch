@@ -87,7 +87,11 @@ bool cMenuSearchResultsItem::Update(const cTimers* vdrtimers, bool Force)
    bool OldInSwitchList = inSwitchList;
    bool hasMatch = false;
    const cTimer* timer = NULL;
+#if VDRVERSNUM > 20300
    if (event) timer = vdrtimers->GetMatch(event, &timerMatch);
+#else
+   if (event) timer = ((cTimers*)vdrtimers)->GetMatch(event, &timerMatch);
+#endif
    if (event) inSwitchList = (SwitchTimers.InSwitchList(event)!=NULL);
    if (timer) hasMatch = true;
 
