@@ -70,7 +70,7 @@ class cSearchTimerThread: public cThread {
     static void Exit(void);
     void CheckExpiredRecs();
     void DelRecording(int index);
-    void CheckManualTimers();
+    void CheckManualTimers(const cTimers* vdrtimers);
     void ModifyManualTimer(const cEvent* event, const cTimer* timer, int bstart, int bstop);
     void CheckEPGHours();
 };

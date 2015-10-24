@@ -199,7 +199,7 @@ public:
   cSearchResults* GetBlacklistEvents(int MarginStop = 0);
   void OnOffTimers(bool);
   void DeleteAllTimers();
-  cTimerObjList* GetTimerList(cTimerObjList* timerList);
+  cTimerObjList* GetTimerList(const cTimers* vdrtimers, cTimerObjList* timerList);
   int GetCountRecordings();
   bool IsActiveAt(time_t t);
   bool HasContent(int contentID);

@@ -102,9 +102,12 @@ void cSearchTimerThread::Stop(void) {
 const cTimer *cSearchTimerThread::GetTimer(cSearchExt *searchExt, const cEvent *pEvent, bool& bTimesMatchExactly)
 {
 #if VDRVERSNUM > 20300
+   LOCK_TIMERS_READ;
+   const cTimers *vdrtimers = Timers;
    LOCK_CHANNELS_READ;
    const cChannels *vdrchannels = Channels;
 #else
+   cTimers *vdrtimers = &Timers;
    cChannels *vdrchannels = &Channels;
 #endif
    const cChannel *channel = vdrchannels->GetByChannelID(pEvent->ChannelID(), true, true);
@@ -135,12 +138,6 @@ const cTimer *cSearchTimerThread::GetTimer(cSearchExt *searchExt, const cEvent *
 
    tm *tmStartEv = localtime_r(&eStart, &tm_r);
 
-#if VDRVERSNUM > 20300
-   LOCK_TIMERS_READ;
-   const cTimers *vdrtimers = Timers;
-#else
-   cTimers *vdrtimers = &Timers;
-#endif
    for (const cTimer *ti = vdrtimers->First(); ti; ti = vdrtimers->Next(ti))
    {
       if (ti->Channel() != channel)
@@ -270,7 +267,7 @@ void cSearchTimerThread::Action(void)
                searchExt = localSearchExts->Next(searchExt);
                continue;
             }
-            pOutdatedTimers = searchExt->GetTimerList(pOutdatedTimers);
+            pOutdatedTimers = searchExt->GetTimerList(vdrtimers, pOutdatedTimers);
 
             cSearchResults* pSearchResults = searchExt->Run(-1, true);
             if (!pSearchResults)
@@ -602,7 +599,7 @@ void cSearchTimerThread::Action(void)
          CheckExpiredRecs();
 
          // check for updates for manual timers
-         CheckManualTimers();
+         CheckManualTimers(vdrtimers);
 
 	 if (m_Active)
 	   mailNotifier.SendUpdateNotifications();
@@ -925,7 +922,7 @@ void cSearchTimerThread::ModifyManualTimer(const cEvent* event, const cTimer* ti
    free(cmdbuf);
 }
 
-void cSearchTimerThread::CheckManualTimers()
+void cSearchTimerThread::CheckManualTimers(const cTimers* vdrtimers)
 {
    LogFile.Log(1, "manual timer check started");
 
@@ -937,12 +934,6 @@ void cSearchTimerThread::CheckManualTimers()
     const cSchedules* schedules = cSchedules::Schedules(SchedulesLock);
 #endif
 
-#if VDRVERSNUM > 20300
-   LOCK_TIMERS_READ;
-   const cTimers *vdrtimers = Timers;
-#else
-   cTimers *vdrtimers = &Timers;
-#endif
    for (const cTimer *ti = vdrtimers->First(); ti && m_Active; ti = vdrtimers->Next(ti))
    {
       if (TriggeredFromSearchTimerID(ti) != -1) continue; // manual timer?
