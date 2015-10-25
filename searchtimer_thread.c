@@ -99,15 +99,12 @@ void cSearchTimerThread::Stop(void) {
 }
 
 
-const cTimer *cSearchTimerThread::GetTimer(cSearchExt *searchExt, const cEvent *pEvent, bool& bTimesMatchExactly)
+const cTimer *cSearchTimerThread::GetTimer(const cTimers* vdrtimers, cSearchExt *searchExt, const cEvent *pEvent, bool& bTimesMatchExactly)
 {
 #if VDRVERSNUM > 20300
-   LOCK_TIMERS_READ;
-   const cTimers *vdrtimers = Timers;
    LOCK_CHANNELS_READ;
    const cChannels *vdrchannels = Channels;
 #else
-   cTimers *vdrtimers = &Timers;
    cChannels *vdrchannels = &Channels;
 #endif
    const cChannel *channel = vdrchannels->GetByChannelID(pEvent->ChannelID(), true, true);
@@ -217,6 +214,9 @@ void cSearchTimerThread::Action(void)
    while(Running() && m_Active && !cPluginEpgsearch::VDR_readyafterStartup)
       Wait.Wait(1000);
 
+#if VDRVERSNUM > 20300
+   cStateKey timersStateKey;
+#endif
    time_t nextUpdate = time(NULL);
    while (m_Active && Running())
    {
@@ -238,10 +238,12 @@ void cSearchTimerThread::Action(void)
   	    LogFile.Log(1,"EPG scan finished");
 	 }
 #if VDRVERSNUM > 20300
-         LOCK_TIMERS_WRITE;
-         cTimers *vdrtimers = Timers;
+         // wait if TimersWriteLock is set
+         if (cTimers::GetTimersWrite(timersStateKey))
+         {
+         timersStateKey.Remove();
+         }
 #else
-         cTimers *vdrtimers = &Timers;
          if (Timers.BeingEdited())
          {
             Wait.Wait(1000);
@@ -267,7 +269,15 @@ void cSearchTimerThread::Action(void)
                searchExt = localSearchExts->Next(searchExt);
                continue;
             }
+           {
+#if VDRVERSNUM > 20300
+            LOCK_TIMERS_READ;
+            cTimers *vdrtimers = (cTimers *)Timers;
+#else
+            cTimers *vdrtimers = &Timers;
+#endif
             pOutdatedTimers = searchExt->GetTimerList(vdrtimers, pOutdatedTimers);
+           } // End of Block should release ReadLock
 
             cSearchResults* pSearchResults = searchExt->Run(-1, true);
             if (!pSearchResults)
@@ -289,6 +299,7 @@ void cSearchTimerThread::Action(void)
                if (!pEvent)
                   continue;
 
+               {
 #if VDRVERSNUM > 20300
                LOCK_CHANNELS_READ;
                const cChannels *vdrchannels = Channels;
@@ -298,6 +309,7 @@ void cSearchTimerThread::Action(void)
                const cChannel *channel = vdrchannels->GetByChannelID(pEvent->ChannelID(), true, true);
                if (!channel)
                   continue;
+               }
 
                int index = 0;
                cTimer *timer = new cTimer(pEvent);
@@ -324,7 +336,13 @@ void cSearchTimerThread::Action(void)
 
                // search for an already existing timer
                bool bTimesMatchExactly = false;
-               const cTimer *t = GetTimer(searchExt, pEvent, bTimesMatchExactly);
+#if VDRVERSNUM > 20300
+               if (cTimers *vdrtimers = cTimers::GetTimersWrite(timersStateKey))
+               {
+#else
+               cTimers *vdrtimers = &Timers;
+#endif
+               const cTimer *t = GetTimer(vdrtimers,searchExt, pEvent, bTimesMatchExactly);
 
                char* Summary = NULL;
 	       uint timerMod = tmNoChange;
@@ -337,6 +355,9 @@ void cSearchTimerThread::Action(void)
                   { // do not update inactive timers
                      LogFile.Log(2,"timer for '%s~%s' (%s - %s, channel %d) not active - won't be touched", pEvent->Title()?pEvent->Title():"no title", pEvent->ShortText()?pEvent->ShortText():"no subtitle", GETDATESTRING(pEvent), GETTIMESTRING(pEvent), ChannelNrFromEvent(pEvent));
                      delete timer;
+#if VDRVERSNUM > 20300
+                     timersStateKey.Remove();
+#endif
                      continue;
                   }
 
@@ -353,18 +374,27 @@ void cSearchTimerThread::Action(void)
                         LogFile.Log(2,"keep obsolete timer for '%s~%s' (%s - %s, channel %d) - was manually created", pEvent->Title()?pEvent->Title():"no title", pEvent->ShortText()?pEvent->ShortText():"no subtitle", GETDATESTRING(pEvent), GETTIMESTRING(pEvent), ChannelNrFromEvent(pEvent));
                      }
                      delete timer;
+#if VDRVERSNUM > 20300
+                     timersStateKey.Remove();
+#endif
                      continue;
                   }
                   if (TimerWasModified(t)) // don't touch timer modified by user
                   {
                      LogFile.Log(2,"timer for '%s~%s' (%s - %s, channel %d) modified by user - won't be touched", pEvent->Title()?pEvent->Title():"no title", pEvent->ShortText()?pEvent->ShortText():"no subtitle", GETDATESTRING(pEvent), GETTIMESTRING(pEvent), ChannelNrFromEvent(pEvent));
                      delete timer;
+#if VDRVERSNUM > 20300
+                     timersStateKey.Remove();
+#endif
                      continue;
                   }
                   if (triggerID > -1 && triggerID != searchExt->ID)
                   {
                      LogFile.Log(2,"timer for '%s~%s' (%s - %s, channel %d) already created by search id %d - won't be touched", pEvent->Title()?pEvent->Title():"no title", pEvent->ShortText()?pEvent->ShortText():"no subtitle", GETDATESTRING(pEvent), GETTIMESTRING(pEvent), ChannelNrFromEvent(pEvent), triggerID);
                      delete timer;
+#if VDRVERSNUM > 20300
+                     timersStateKey.Remove();
+#endif
                      continue;
                   }
 
@@ -383,6 +413,9 @@ void cSearchTimerThread::Action(void)
                      if (Summary) free(Summary);
                      delete timer;
                      free(pFile);
+#if VDRVERSNUM > 20300
+                     timersStateKey.Remove();
+#endif
                      continue;
                   }
                   else
@@ -419,6 +452,9 @@ void cSearchTimerThread::Action(void)
                      // only update recording timers if stop time has changed, since all other settings can't be modified
                      LogFile.Log(2,"timer for '%s~%s' (%s - %s, channel %d) already recording - no changes possible", pEvent->Title()?pEvent->Title():"no title", pEvent->ShortText()?pEvent->ShortText():"no subtitle", GETDATESTRING(pEvent), GETTIMESTRING(pEvent), ChannelNrFromEvent(pEvent));
                      delete timer;
+#if VDRVERSNUM > 20300
+                     timersStateKey.Remove();
+#endif
                      continue;
                   }
                }
@@ -427,6 +463,9 @@ void cSearchTimerThread::Action(void)
                   if (!pResultObj->needsTimer)
                   {
                      delete timer;
+#if VDRVERSNUM > 20300
+                     timersStateKey.Remove();
+#endif
                      continue;
                   }
                }
@@ -442,6 +481,9 @@ void cSearchTimerThread::Action(void)
                   {
                      if (Summary) free(Summary);
                      delete timer;
+#if VDRVERSNUM > 20300
+                     timersStateKey.Remove();
+#endif
                      continue;
                   }
 		  if (!announceList.Lookup(pEvent))
@@ -449,6 +491,9 @@ void cSearchTimerThread::Action(void)
 
                   if (Summary) free(Summary);
                   delete timer;
+#if VDRVERSNUM > 20300
+                  timersStateKey.Remove();
+#endif
                   continue;
                }
 
@@ -460,12 +505,18 @@ void cSearchTimerThread::Action(void)
                   {
                      if (Summary) free(Summary);
                      delete timer;
+#if VDRVERSNUM > 20300
+                     timersStateKey.Remove();
+#endif
                      continue;
                   }
 		  mailNotifier.AddAnnounceEventNotification(pEvent->EventID(), pEvent->ChannelID(), searchExt->ID);
 
                   if (Summary) free(Summary);
                   delete timer;
+#if VDRVERSNUM > 20300
+                  timersStateKey.Remove();
+#endif
                   continue;
                }
                if (searchExt->action == searchTimerActionSwitchOnly ||
@@ -489,9 +540,15 @@ void cSearchTimerThread::Action(void)
                   }
                   if (Summary) free(Summary);
                   delete timer;
+#if VDRVERSNUM > 20300
+                  timersStateKey.Remove();
+#endif
                   continue;
                }
 
+#if VDRVERSNUM > 20300
+               timersStateKey.Remove(); // we have to release here
+#endif
                if (AddModTimer(timer, index, searchExt, pEvent, Priority, Lifetime, Summary, timerMod))
                {
                   if (index == 0)
@@ -501,6 +558,9 @@ void cSearchTimerThread::Action(void)
                }
                if (Summary) free(Summary);
                delete timer;
+#if VDRVERSNUM > 20300
+               } // if TimersGetWrite
+#endif
             }
 	    delete pSearchResults;
             searchExt = localSearchExts->Next(searchExt);
@@ -513,6 +573,12 @@ void cSearchTimerThread::Action(void)
             if (pOutdatedTimers->Count() > 0)
             {
                LogFile.Log(1,"removing outdated timers");
+#if VDRVERSNUM > 20300
+               LOCK_TIMERS_READ;  // only internal remove
+               cTimers *vdrtimers = (cTimers *)Timers;
+#else
+               cTimers *vdrtimers = &Timers;
+#endif
                for(cTimerObj *tObj = pOutdatedTimers->First(); tObj; tObj = pOutdatedTimers->Next(tObj))
                {
                   const cTimer* t = tObj->timer;
@@ -599,7 +665,7 @@ void cSearchTimerThread::Action(void)
          CheckExpiredRecs();
 
          // check for updates for manual timers
-         CheckManualTimers(vdrtimers);
+         CheckManualTimers();
 
 	 if (m_Active)
 	   mailNotifier.SendUpdateNotifications();
@@ -922,14 +988,17 @@ void cSearchTimerThread::ModifyManualTimer(const cEvent* event, const cTimer* ti
    free(cmdbuf);
 }
 
-void cSearchTimerThread::CheckManualTimers(const cTimers* vdrtimers)
+void cSearchTimerThread::CheckManualTimers(void)
 {
    LogFile.Log(1, "manual timer check started");
 
 #if VDRVERSNUM > 20300
+    LOCK_TIMERS_WRITE;  // to be checked !!!
+    cTimers *vdrtimers = (cTimers*) Timers;
     LOCK_SCHEDULES_READ;
     const cSchedules *schedules = Schedules;
 #else
+    cTimers *vdrtimers = &Timers;
     cSchedulesLock SchedulesLock;
     const cSchedules* schedules = cSchedules::Schedules(SchedulesLock);
 #endif

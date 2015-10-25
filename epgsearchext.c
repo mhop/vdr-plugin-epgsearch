@@ -1048,13 +1048,13 @@ cSearchResults* cSearchExt::Run(int PayTVMode, bool inspectTimerMargin, int eval
    cSearchResults* pBlacklistResults = GetBlacklistEvents(inspectTimerMargin?MarginStop:0);
 
    int counter = 0;
-   while (Schedule) {
 #if VDRVERSNUM > 20300
-      LOCK_CHANNELS_READ;
-      const cChannels *vdrchannels = Channels;
+   LOCK_CHANNELS_READ;
+   const cChannels *vdrchannels = Channels;
 #else
-      cChannels *vdrchannels = &Channels;
+   cChannels *vdrchannels = &Channels;
 #endif
+   while (Schedule) {
       const cChannel* channel = vdrchannels->GetByChannelID(Schedule->ChannelID(),true,true);
       if (!channel)
       {
@@ -1188,6 +1188,12 @@ void cSearchExt::CheckRepeatTimers(cSearchResults* pResults)
    }
 
    cSearchResult* pResultObj = NULL;
+#if VDRVERSNUM > 20300
+   LOCK_TIMERS_READ;
+   const cTimers* vdrtimers = Timers;
+#else
+   cTimers* vdrtimers = &Timers;
+#endif
    for (pResultObj = pResults->First(); pResultObj; pResultObj = pResults->Next(pResultObj))
    {
       if (action != searchTimerActionRecord) // only announce if there is no timer for the event
@@ -1276,7 +1282,7 @@ void cSearchExt::CheckRepeatTimers(cSearchResults* pResults)
          }
       }
       bool dummy;
-      const cTimer* timer = cSearchTimerThread::GetTimer(this, pEvent, dummy);
+      const cTimer* timer = cSearchTimerThread::GetTimer(vdrtimers, this, pEvent, dummy);
       if (timer && !timer->HasFlags(tfActive))
       {
          LogFile.Log(3,"skip '%s~%s' (%s - %s, channel %d), existing timer disabled", pEvent->Title()?pEvent->Title():"no title", pEvent->ShortText()?pEvent->ShortText():"no subtitle", GETDATESTRING(pEvent), GETTIMESTRING(pEvent), ChannelNrFromEvent(pEvent));
