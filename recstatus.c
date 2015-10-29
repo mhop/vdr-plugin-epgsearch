@@ -46,8 +46,7 @@ cRecStatusMonitor::cRecStatusMonitor()
 void cRecStatusMonitor::Recording(const cDevice *Device, const char *Name, const char* Filename, bool On)
 {
 #if VDRVERSNUM > 20300
-   cStatusThread statusThread;
-   statusThread.Init(Device,Name,Filename,On);
+   cStatusThread::Init(Device,Name,Filename,On);
 #else
    time_t now = time(NULL);
    // insert new timers currently recording in TimersRecording

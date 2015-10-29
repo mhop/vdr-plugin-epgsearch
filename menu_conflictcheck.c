@@ -165,18 +165,17 @@ eOSState cMenuConflictCheck::ProcessKey(eKeys Key)
 cMenuConflictCheckDetailsItem::cMenuConflictCheckDetailsItem(cConflictCheckTimerObj* TimerObj)
 {
     timerObj = TimerObj;
-    cTimers *vdrtimers;
 #if VDRVERSNUM > 20300
     LOCK_TIMERS_READ;
-    vdrtimers = (cTimers *)Timers;
+    const cTimers *vdrtimers = Timers;
 #else
-    vdrtimers = &Timers;
+    cTimers *vdrtimers = &Timers;
 #endif
     hasTimer = timerObj->OrigTimer(vdrtimers)?timerObj->OrigTimer(vdrtimers)->HasFlags(tfActive):false;
     Update(vdrtimers, true);
 }
 
-bool cMenuConflictCheckDetailsItem::Update(cTimers* vdrtimers, bool Force)
+bool cMenuConflictCheckDetailsItem::Update(const cTimers* vdrtimers, bool Force)
 {
     bool oldhasTimer = hasTimer;
     hasTimer = timerObj->OrigTimer(vdrtimers)?timerObj->OrigTimer(vdrtimers)->HasFlags(tfActive):false;
@@ -276,7 +275,7 @@ eOSState cMenuConflictCheckDetails::ToggleTimer(cConflictCheckTimerObj* TimerObj
   cTimers *vdrtimers;
 #if VDRVERSNUM > 20300
   LOCK_TIMERS_WRITE;
-  vdrtimers = (cTimers *)Timers;
+  vdrtimers = Timers;
 #else
   vdrtimers = &Timers;
 #endif
@@ -290,7 +289,7 @@ eOSState cMenuConflictCheckDetails::ToggleTimer(cConflictCheckTimerObj* TimerObj
   return osContinue;
 }
 
-bool cMenuConflictCheckDetails::Update(cTimers* vdrtimers, bool Force)
+bool cMenuConflictCheckDetails::Update(const cTimers* vdrtimers, bool Force)
 {
     bool result = false;
     for (cOsdItem *item = First(); item; item = Next(item)) {
@@ -486,7 +485,7 @@ eOSState cMenuConflictCheckDetails::ProcessKey(eKeys Key)
 	    SetHelpKeys();
 #if VDRVERSNUM > 20300
         LOCK_TIMERS_READ;
-        cTimers *vdrtimers = (cTimers *)Timers;
+        const cTimers *vdrtimers = Timers;
 #else
         cTimers *vdrtimers = &Timers;
 #endif

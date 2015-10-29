@@ -537,11 +537,11 @@ void cSearchTimerThread::Action(void)
 #if VDRVERSNUM > 20300
                   {
                   LOCK_TIMERS_READ;
-                  cTimers *vdrtimers = (cTimers *)Timers;
+                  const cTimers *vdrtimers = Timers;
 #else
                   cTimers *vdrtimers = &Timers;
 #endif
-                  for(cTimer* checkT = vdrtimers->First(); checkT; checkT = vdrtimers->Next(checkT))
+                  for(const cTimer* checkT = vdrtimers->First(); checkT; checkT = vdrtimers->Next(checkT))
                      if (checkT == t)
                      {
                         found = true;

@@ -58,7 +58,7 @@ public:
 	void SetStatus(StatusThreadStatus Status) { LogFile.eSysLog("%d", int(Status)); cStatusThread::m_Status = Status; }
         cStatusThread();
         virtual ~cStatusThread();
-        void Init(const cDevice *Device, const char *Name, const char *Filename, bool On);
+        static void Init(const cDevice *Device, const char *Name, const char *Filename, bool On);
         void Exit(void);
 };
 
