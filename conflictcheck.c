@@ -695,8 +695,8 @@ bool cConflictCheck::TimerInConflict(const cTimer* timer)
 		    for (it2 = (*it)->concurrentTimers->begin(); it2 != (*it)->concurrentTimers->end(); ++it2)
 		    {
 #if VDRVERSNUM > 20300
-			LOCK_TIMERS_WRITE;
-			cTimers *vdrtimers = Timers;
+			LOCK_TIMERS_READ;
+			cTimers *vdrtimers = (cTimers *)Timers;
 #else
 			cTimers *vdrtimers = &Timers;
 #endif
@@ -724,8 +724,8 @@ void cConflictCheck::EvaluateConflCheckCmd()
 	      {
 		string result = EPGSearchConfig.conflCheckCmd;
 #if VDRVERSNUM > 20300
-		LOCK_TIMERS_WRITE;
-		cTimers *vdrtimers = Timers;
+		LOCK_TIMERS_READ;
+		cTimers *vdrtimers = (cTimers *)Timers;
 #else
 		cTimers *vdrtimers = &Timers;
 #endif

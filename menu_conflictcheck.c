@@ -165,25 +165,20 @@ eOSState cMenuConflictCheck::ProcessKey(eKeys Key)
 cMenuConflictCheckDetailsItem::cMenuConflictCheckDetailsItem(cConflictCheckTimerObj* TimerObj)
 {
     timerObj = TimerObj;
+    cTimers *vdrtimers;
 #if VDRVERSNUM > 20300
-    LOCK_TIMERS_WRITE;
-    cTimers *vdrtimers = Timers;
+    LOCK_TIMERS_READ;
+    vdrtimers = (cTimers *)Timers;
 #else
-    cTimers *vdrtimers = &Timers;
+    vdrtimers = &Timers;
 #endif
     hasTimer = timerObj->OrigTimer(vdrtimers)?timerObj->OrigTimer(vdrtimers)->HasFlags(tfActive):false;
-    Update(true);
+    Update(vdrtimers, true);
 }
 
-bool cMenuConflictCheckDetailsItem::Update(bool Force)
+bool cMenuConflictCheckDetailsItem::Update(cTimers* vdrtimers, bool Force)
 {
     bool oldhasTimer = hasTimer;
-#if VDRVERSNUM > 20300
-    LOCK_TIMERS_WRITE;
-    cTimers *vdrtimers = Timers;
-#else
-    cTimers *vdrtimers = &Timers;
-#endif
     hasTimer = timerObj->OrigTimer(vdrtimers)?timerObj->OrigTimer(vdrtimers)->HasFlags(tfActive):false;
     if (Force || hasTimer != oldhasTimer)
     {
@@ -278,27 +273,28 @@ eOSState cMenuConflictCheckDetails::Commands(eKeys Key)
 
 eOSState cMenuConflictCheckDetails::ToggleTimer(cConflictCheckTimerObj* TimerObj)
 {
+  cTimers *vdrtimers;
 #if VDRVERSNUM > 20300
-    LOCK_TIMERS_WRITE;
-    cTimers *vdrtimers = Timers;
+  LOCK_TIMERS_WRITE;
+  vdrtimers = (cTimers *)Timers;
 #else
-    cTimers *vdrtimers = &Timers;
+  vdrtimers = &Timers;
 #endif
   if (!TimerObj || !TimerObj->OrigTimer(vdrtimers)) return osContinue;
-  TimerObj->OrigTimer(vdrtimers)->OnOff();
+  TimerObj->OrigTimer(vdrtimers)->OnOff();  // Toggles Timer Flag
 #if VDRVERSNUM < 20300
   vdrtimers->SetModified();
 #endif
-  Update();
+  Update(vdrtimers);
   Display();
   return osContinue;
 }
 
-bool cMenuConflictCheckDetails::Update(bool Force)
+bool cMenuConflictCheckDetails::Update(cTimers* vdrtimers, bool Force)
 {
     bool result = false;
     for (cOsdItem *item = First(); item; item = Next(item)) {
-	if (item->Selectable() && ((cMenuConflictCheckDetailsItem *)item)->Update(Force))
+	if (item->Selectable() && ((cMenuConflictCheckDetailsItem *)item)->Update(vdrtimers, Force))
 	    result = true;
     }
     return result;
@@ -488,7 +484,13 @@ eOSState cMenuConflictCheckDetails::ProcessKey(eKeys Key)
 
 	if (Key != kNone)
 	    SetHelpKeys();
-	if ((HadSubMenu || gl_TimerProgged) && Update(true))
+#if VDRVERSNUM > 20300
+        LOCK_TIMERS_READ;
+        cTimers *vdrtimers = (cTimers *)Timers;
+#else
+        cTimers *vdrtimers = &Timers;
+#endif
+	if ((HadSubMenu || gl_TimerProgged) && Update(vdrtimers, true))
 	{
 	    if (gl_TimerProgged) // when using epgsearch's timer edit menu, update is delayed because of SVDRP
 	    {

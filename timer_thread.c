@@ -90,12 +90,9 @@ void cTimerThread::Action(void)
             break;
         }
 #if VDRVERSNUM > 20300
-	cStateKey timersStateKey;
-	const cTimers *vdrtimers = cTimers::GetTimersRead(timersStateKey);
-	if (vdrtimers != NULL)
-	    timersStateKey.Remove();
-	else
-	    continue;
+        {
+	LOCK_TIMERS_READ;
+        }
 #else
 	if (Timers.BeingEdited())
 	{

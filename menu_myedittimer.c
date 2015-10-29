@@ -76,10 +76,7 @@ cMenuMyEditTimer::cMenuMyEditTimer(cTimer *Timer, bool New, const cEvent* Event,
 	Set();
 	SetHelp(addIfConfirmed?NULL:trVDR("Button$Delete"), NULL, NULL, NULL);
     }
-#if VDRVERSNUM > 20300
-  vdrtimers = cTimers::GetTimersWrite(timersStateKey);
-#else
-  vdrtimers = &Timers;
+#if VDRVERSNUM < 20300
   Timers.IncBeingEdited();
 #endif
 }
@@ -213,10 +210,7 @@ cMenuMyEditTimer::~cMenuMyEditTimer()
 {
   if (timer && addIfConfirmed)
      delete timer; // apparently it wasn't confirmed
-#if VDRVERSNUM > 20300
-  if (vdrtimers != NULL)
-     timersStateKey.Remove();
-#else
+#if VDRVERSNUM < 20300
   Timers.DecBeingEdited();
 #endif
 }
@@ -255,6 +249,12 @@ bool cMenuMyEditTimer::IsSingleEvent(void) const
 eOSState cMenuMyEditTimer::DeleteTimer()
 {
     // Check if this timer is active:
+#if VDRVERSNUM > 20300
+    LOCK_TIMERS_WRITE;
+    cTimers *vdrtimers = Timers;
+#else
+    cTimers *vdrtimers = &Timers;
+#endif
     if (timer && !addIfConfirmed) {
 	if (Interface->Confirm(trVDR("Delete timer?"))) {
 	    if (timer->Recording()) {
@@ -270,13 +270,20 @@ eOSState cMenuMyEditTimer::DeleteTimer()
 		    return osContinue;
 	    }
 	    LogFile.iSysLog("deleting timer %s", *timer->ToDescr());
-     if (vdrtimers)
+            if (vdrtimers)
+            {
 	       vdrtimers->Del(timer);
-	    gl_timerStatusMonitor->SetConflictCheckAdvised();
+
+	       gl_timerStatusMonitor->SetConflictCheckAdvised();
 #if VDRVERSNUM < 20300
-	    Timers.SetModified();
+	       Timers.SetModified();
 #endif
-	    return osBack;
+	       return osBack;
+            }
+            else
+            {
+               LogFile.iSysLog("EPGSEARCH deleting timer failed");
+            }
         }
     }
     return osContinue;
@@ -440,9 +447,17 @@ eOSState cMenuMyEditTimer::ProcessKey(eKeys Key)
                     free(tmpFile);
                     free(tmpDir);
 
+#if VDRVERSNUM > 20300
+                    {
+                    LOCK_TIMERS_WRITE;
+                    cTimers* vdrtimers = Timers;
+#else
+                    cTimers* vdrtimers = &Timers;
+#endif
                     if (addIfConfirmed && vdrtimers != NULL)
                       vdrtimers->Add(timer);
 #if VDRVERSNUM > 20300
+                    }
                     LOCK_SCHEDULES_READ;
                     timer->SetEventFromSchedule(Schedules);
 #else
