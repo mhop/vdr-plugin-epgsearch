@@ -65,13 +65,19 @@ cStatusThread::~cStatusThread() {
 
 void cStatusThread::Init(const cDevice *Device, const char *Name, const char *Filename, bool On) {
     if (m_Instance == NULL) {
-	m_Instance = new cStatusThread;
-	m_Instance->m_device=Device;
-	m_Instance->m_name=Name;
-	m_Instance->m_filename=Filename;
-	m_Instance->m_on=On;
-	m_Instance->Start();
+        m_Instance = new cStatusThread;
     }
+    else {
+        if (m_Instance->m_Active) {
+            LogFile.eSysLog("Epgsearch recstatus_thread called too fast"); //should stack
+            return;
+        }
+    }
+    m_Instance->m_device=Device;
+    m_Instance->m_name=Name;
+    m_Instance->m_filename=Filename;
+    m_Instance->m_on=On;
+    m_Instance->Start();
 }
 
 void cStatusThread::Exit(void) {
@@ -242,5 +248,6 @@ void cStatusThread::Action(void)
          tiR = gl_recStatusMonitor->TimersRecording.Next(tiR);
       }
    }
+   m_Active = false;
 }
 #endif
