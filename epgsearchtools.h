@@ -37,6 +37,9 @@ using std::string;
 
 #define MAXPARSEBUFFER KILOBYTE(10)
 
+#define CHANNEL_SEARCH_MAX 120
+#define DAYS_SEARCH_MAX 5
+
 #undef CHANNELNAME
 #define CHANNELNAME(x) (x ? x->ShortName(true) : "")
 

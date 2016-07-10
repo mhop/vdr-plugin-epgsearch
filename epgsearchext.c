@@ -884,6 +884,10 @@ const cEvent * cSearchExt::GetEventBySearchExt(const cSchedule *schedules, const
       p1 = Events->First();
 
    time_t tNow=time(NULL);
+   struct tm when;
+   when = *localtime(&tNow);
+   when.tm_mday += DAYS_SEARCH_MAX; 
+   time_t tScanEnd=mktime(&when);
    char* searchText = strdup(search);
 
    int searchStart = 0, searchStop = 0;
@@ -913,7 +917,10 @@ const cEvent * cSearchExt::GetEventBySearchExt(const cSchedule *schedules, const
       }
 
       if (skipRunningEvents && tNow > p->StartTime())
-	continue;
+         continue;
+
+      if (p->StartTime()>tScanEnd)
+         continue;
 
       // ignore events without title
       if (!p->Title() || !*p->Title())
@@ -1057,6 +1064,11 @@ cSearchResults* cSearchExt::Run(int PayTVMode, bool inspectTimerMargin, int eval
    while (Schedule) {
       const cChannel* channel = vdrchannels->GetByChannelID(Schedule->ChannelID(),true,true);
       if (!channel)
+      {
+         Schedule = (const cSchedule *)schedules->Next(Schedule);
+         continue;
+      }
+      if (channel->Number()>CHANNEL_SEARCH_MAX)
       {
          Schedule = (const cSchedule *)schedules->Next(Schedule);
          continue;
